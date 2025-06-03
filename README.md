@@ -1,24 +1,19 @@
 + https://github.com/dsuarezv/satellite-tracker/tree/master
+
+The original development project comes from, thanks to their contribution, based on their project, this project extends and develops more functions to present satellite attack situations
 + https://github.com/deptofdefense/satellite-jamming-simulator
 
 ![image](https://github.com/user-attachments/assets/c5da0971-4fa7-4505-bd04-e435631c4672)
 
+Satellite data source https://celestrak.org/
 
----- Ref
+---- 
+
+Ref
 
 + https://www.youtube.com/watch?v=t_efCpd2PbM
 
 ----
-# Satellite Simulator
-
-This is a fork of the excellent [Satellite Tracker](https://github.com/dsuarezv/satellite-tracker) project by David Suarez.
-
-It adds the ability to simulate basic Radio Frequency Interference (RFI) scenarios for satellites in Earth Orbit. It is intended to help users gain a simple intuition of the interaction between orbital motion and radio transmission requirements.
-
-The underlying model is a simple calculation of Free Space Path Loss on the basis of distance between two isotropic antennas: one aboard the spacecraft and the other located on the Earth's surface. Both the jammer and defender are assumed to be operating in the same frequency and no protocol-level implementation is simulated.
-
-Orbits are propagated using recent data from the Celestrak satellite catalog and the SGP4 implementation from [satellite-js](https://github.com/shashwatak/satellite-js) library.
-
 
 ## Running the App
 This is a static client-side javascript implementation. Running it should just be a matter of:
@@ -27,9 +22,24 @@ npm install
 npm run start
 ```
 
+creat .env
+```
+REACT_APP_GOOGLE_AI_API_KEY=AIXXXX
+REACT_APP_GOOGLE_AI_MODEL=gemini-2.0-flash
+```
++ get from https://aistudio.google.com/apikey
+  + is free
+
 This has been tested with `node v18.4.0`, your mileage may vary with other versions.
 
 ## Making Modifications
 Most of the relevant physical modeling implementation is contained in `engine.js` or `tle.js`. Most of the UI is implemented directly in `App.js`.
+
+## Future features
+
++ More realistic attack presentation
++ Add more attacks
++ Solve data retrieval issues
++ Add AI analysis features
 
 
