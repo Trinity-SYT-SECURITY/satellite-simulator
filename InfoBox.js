@@ -8,7 +8,7 @@ class InfoBox extends Component {
 
         return (
             <div className='Info'>
-                <h1>Satellite Jamming Simulator</h1>
+                <h1>Satellite Simulator</h1>
                 <div>
                 <h2>Current Target: <Badge bg="success">{p.satellite_name}</Badge></h2>
                 <h5>Time: {current_date} </h5>

@@ -1,10 +1,7 @@
-import * as React from "react";
-import { render } from "react-dom";
-import App from "./App";
+import * as React from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './App';
 
-
-render(<App />, document.getElementById("root"));
-
-if (module.hot) {
-    module.hot.accept();
-}
+const container = document.getElementById('root');
+const root = createRoot(container);
+root.render(<App />);
