@@ -9,7 +9,7 @@
 + https://www.youtube.com/watch?v=t_efCpd2PbM
 
 ----
-# Satellite Jamming Simulator
+# Satellite Simulator
 
 This is a fork of the excellent [Satellite Tracker](https://github.com/dsuarezv/satellite-tracker) project by David Suarez.
 
@@ -19,16 +19,10 @@ The underlying model is a simple calculation of Free Space Path Loss on the basi
 
 Orbits are propagated using recent data from the Celestrak satellite catalog and the SGP4 implementation from [satellite-js](https://github.com/shashwatak/satellite-js) library.
 
-Feel free to modify this for your own learning and projects. Some things you might find fun to try implementing:
-* Jamming from one ground-station to another with the satellite as the primary transmitter (e.g. GPS jamming)
-* Jamming from one satellite to another
-* Jamming in near-band frequencies
-* The presence of multiple jammers or transmitters
 
 ## Running the App
 This is a static client-side javascript implementation. Running it should just be a matter of:
 ```bash
-cd spacejam-demo/
 npm install
 npm run start
 ```
