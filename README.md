@@ -18,6 +18,12 @@ Ref
 ## Running the App
 This is a static client-side javascript implementation. Running it should just be a matter of:
 ```bash
+npm install @google/genai
+npm install dayjs\nnpm install dayjs/plugin/utc
+npm install react-toastify
+npm install three@latest
+npm install chart.js react-chartjs-2
+
 npm install
 npm run start
 ```
