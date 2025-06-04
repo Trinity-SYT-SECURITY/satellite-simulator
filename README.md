@@ -211,6 +211,8 @@ npm install chart.js react-chartjs-2
 
 npm install
 npm run start
+rm -rf .parcel-cache dist
+
 ```
 
 creat .env
