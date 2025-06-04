@@ -16,8 +16,10 @@ import SignalVisualization from './SignalVisualization';
 import AttackHistory from './AttackHistory';
 import config from './config';
 import { createRoot } from 'react-dom/client';
-
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 var utc = require('dayjs/plugin/utc');
+
 dayjs.extend(utc);
 
 const now = new Date();
@@ -159,42 +161,141 @@ const CELESTRAK_CACHE = {
   }
 };
 
+class DefenderStrategy {
+  constructor(app) {
+    this.app = app;
+    this.defenseActive = false;
+    this.frequencyHoppingInterval = null;
+  }
+
+  // 啟動防禦策略
+  activateDefense(attackType, attackIntensity, attackId) {
+  this.defenseActive = true;
+  console.log(`Defender activating defense against ${attackType} attack with intensity ${attackIntensity}%`);
+
+  const defenseEvent = {
+    id: crypto.randomUUID(),
+    attackId: attackId,
+    timestamp: new Date().toISOString(),
+    attackType: attackType,
+    intensity: attackIntensity,
+    actions: [],
+  };
+
+  switch (attackType) {
+    case 'power':
+      this.app.setState(prev => {
+        const newEirp = Math.min(200, prev.defender_eirp + attackIntensity * 0.2);
+        defenseEvent.actions.push(`Increased EIRP to ${newEirp.toFixed(1)} dBm`);
+        toast.info(`Defense: Increased EIRP to ${newEirp.toFixed(1)} dBm`);
+        return {
+          defender_eirp: newEirp,
+          defenseHistory: [...prev.defenseHistory, defenseEvent],
+        };
+      });
+      break;
+    case 'frequency':
+      defenseEvent.actions.push('Started frequency hopping');
+      toast.info('Defense: Started frequency hopping');
+      this.startFrequencyHopping();
+      this.app.setState(prev => ({
+        defenseHistory: [...prev.defenseHistory, defenseEvent],
+      }));
+      break;
+    case 'spoofing':
+      this.app.setState(prev => {
+        const newSpoofingStrength = Math.max(0, prev.spoofing_signal_strength * 0.5);
+        defenseEvent.actions.push(`Reduced spoofing signal strength to ${newSpoofingStrength.toFixed(1)} dBm`);
+        toast.info(`Defense: Reduced spoofing signal strength to ${newSpoofingStrength.toFixed(1)} dBm`);
+        return {
+          spoofing_signal_strength: newSpoofingStrength,
+          defenseHistory: [...prev.defenseHistory, defenseEvent],
+        };
+      });
+      break;
+    case 'dos':
+      this.app.setState(prev => {
+        const newDosRate = Math.max(1, prev.dos_packet_rate * 0.7);
+        defenseEvent.actions.push(`Reduced DoS packet rate to ${newDosRate.toFixed(0)} pps`);
+        toast.info(`Defense: Reduced DoS packet rate to ${newDosRate.toFixed(0)} pps`);
+        return {
+          dos_packet_rate: newDosRate,
+          defenseHistory: [...prev.defenseHistory, defenseEvent],
+        };
+      });
+      break;
+    default:
+      break;
+  }
+
+  setTimeout(() => {
+    this.deactivateDefense();
+  }, 10000);
+  }
+
+  // 停止防禦策略
+  deactivateDefense() {
+    this.defenseActive = false;
+    if (this.frequencyHoppingInterval) {
+      clearInterval(this.frequencyHoppingInterval);
+      this.frequencyHoppingInterval = null;
+    }
+    console.log('Defender deactivated defense mechanisms');
+  }
+
+  // 頻率跳變實現
+  startFrequencyHopping() {
+    if (this.frequencyHoppingInterval) return;
+
+    this.frequencyHoppingInterval = setInterval(() => {
+      this.app.setState(prev => ({
+        frequency: Math.min(30000 * 1e6, Math.max(1 * 1e6, prev.frequency + (Math.random() - 0.5) * 500 * 1e6)),
+      }));
+      console.log('Defender frequency hopping to:', this.app.state.frequency / 1e6, 'MHz');
+    }, 2000); // 每 2 秒跳變一次頻率
+  }
+}
+
+
 class App extends Component {
   constructor(props) {
-    super(props);
-    this.attackLogger = new AttackLogger();
-    this.attackAnalyzer = new AttackAnalyzer();
-    this.initial_state = {
-      pause_timer: false,
-      current_date: null,
-      target_station: null,
-      stations: [],
-      positioningMode: null,
-      attacker_station: null,
-      defender_station: null,
-      attacker_eirp: 0,
-      defender_eirp: 30,
-      selected_range: [todayMidnight, endDefault],
-      step_size: 10,
-      attack_type: 'power',
-      frequency: 10000000,
-      bandwidth: 1000000,
-      spoofing_signal_strength: 0,
-      dos_packet_rate: 1000,
-      show_analysis: false,
-      aiAnalysis: [],
-      realtimeTelemetry: {
-        signalStrength: 0,
-        frequencyOffset: 0,
-        bitErrorRate: 0,
-        commStatus: 'normal'
-      },
-      attackHistory: [],
-    };
-    this.state = { ...this.initial_state };
-    this.engine = null;
-    this.el = null;
-    this.attackLines = [];
+  super(props);
+  this.attackLogger = new AttackLogger();
+  this.attackAnalyzer = new AttackAnalyzer();
+  this.defenderStrategy = new DefenderStrategy(this); // 添加這一行
+  this.initial_state = {
+    pause_timer: false,
+    current_date: null,
+    target_station: null,
+    stations: [],
+    positioningMode: null,
+    attacker_station: null,
+    defender_station: null,
+    attacker_eirp: 0,
+    defender_eirp: 30,
+    selected_range: [todayMidnight, endDefault],
+    step_size: 10,
+    attack_type: 'power',
+    frequency: 10000000,
+    bandwidth: 1000000,
+    defenseStatus: 'Idle',
+    spoofing_signal_strength: 0,
+    dos_packet_rate: 1000,
+    show_analysis: false,
+    aiAnalysis: [],
+    realtimeTelemetry: {
+      signalStrength: 0,
+      frequencyOffset: 0,
+      bitErrorRate: 0,
+      commStatus: 'normal'
+    },
+    attackHistory: [],
+    defenseHistory: [],
+  };
+  this.state = { ...this.initial_state };
+  this.engine = null;
+  this.el = null;
+  this.attackLines = [];
   }
   
   showAttackDetails = (event) => {
@@ -532,85 +633,108 @@ class App extends Component {
   };
 
   getAttackEffectiveness = () => {
-    const sinr = this.getSinrFromDbm(this.defenderPowerAtReceiver(), this.attackerPowerAtReceiver());
+  const sinr = this.getSinrFromDbm(this.defenderPowerAtReceiver(), this.attackerPowerAtReceiver());
+  let effectiveness;
 
-    if (sinr < 0) return 100;
-    if (sinr < 5) return 80;
-    if (sinr < 10) return 50;
-    if (sinr < 15) return 20;
-    return 0;
+  if (sinr < 0) effectiveness = 100;
+  else if (sinr < 5) effectiveness = 80;
+  else if (sinr < 10) effectiveness = 50;
+  else if (sinr < 15) effectiveness = 20;
+  else effectiveness = 0;
+
+  // 當防禦啟動時，降低攻擊有效性
+  if (this.defenderStrategy.defenseActive) {
+    effectiveness *= 0.5; // 防禦啟動時攻擊效果減半
+  }
+
+  return effectiveness;
+  };
+  
+  
+  handleAttack = async (intensity) => {
+  const { target_station, attacker_station, attack_type, frequency } = this.state;
+  if (!target_station || !attacker_station) {
+    toast.error('Cannot launch attack: Target or attacker station is missing.');
+    return;
+  }
+
+  const range = this.getStationRange(attacker_station, target_station, this.state.current_date);
+  if (range < 0) {
+    toast.error('Cannot launch attack: Target station is not visible to attacker.');
+    return;
+  }
+
+  const { effectiveness, result } = this.getAttackEffectiveness();
+  this.engine.showAttackEffect(attacker_station, target_station, intensity, result);
+
+  const attackEvent = {
+    id: crypto.randomUUID(),
+    timestamp: new Date().toISOString(),
+    target: target_station,
+    attacker: attacker_station,
+    type: attack_type,
+    intensity,
+    frequency,
+    range,
+    duration: 1000 * (1 + intensity / 100),
+    effectiveness,
+    result,
   };
 
-  handleAttack = async (intensity) => {
-    const { target_station, attacker_station, attack_type, frequency } = this.state;
-    if (!target_station || !attacker_station) {
-      console.warn('Cannot launch attack: Target or attacker station is missing.');
-      return;
+  // 即時更新攻擊紀錄並顯示通知
+  this.setState(
+    prev => ({
+      attackHistory: [...prev.attackHistory, attackEvent],
+      defenseStatus: `Defending against ${attack_type}`,
+    }),
+    () => {
+      toast.warn(`Attack Launched: ${attack_type} (${result})`);
     }
+  );
 
-    const range = this.getStationRange(attacker_station, target_station, this.state.current_date);
-    if (range < 0) {
-      console.warn('Cannot launch attack: Target station is not visible to attacker.');
-      return;
-    }
+  // 觸發防禦策略
+  this.defenderStrategy.activateDefense(attack_type, intensity, attackEvent.id);
 
-    this.engine.showAttackEffect(attacker_station, target_station, intensity);
+  setTimeout(async () => {
+    const analysis = await this.attackAnalyzer.analyzeAttack(attackEvent);
+    this.setState(prev => ({
+      aiAnalysis: [...prev.aiAnalysis, {
+        id: attackEvent.id,
+        content: analysis
+      }],
+      defenseStatus: 'Idle',
+    }));
+  }, 0);
 
-    const attackEvent = {
-      id: crypto.randomUUID(),
-      timestamp: new Date(),
-      target: target_station,
-      attacker: attacker_station,
-      type: attack_type,
-      intensity,
-      frequency,
-      range,
-      duration: 1000 * (1 + intensity / 100)
-    };
-
-    setTimeout(async () => {
-      const analysis = await this.attackAnalyzer.analyzeAttack(attackEvent);
-      this.setState(prev => ({
-        aiAnalysis: [...prev.aiAnalysis, {
-          id: attackEvent.id,
-          content: analysis
-        }]
-      }));
-    }, 0);
-
+  if (result !== 'Blocked') {
     this.updateTelemetry(intensity);
-
-    this.setState(prev => {
-      const newHistory = [...prev.attackHistory, attackEvent];
-      console.log('Updated Attack History:', newHistory);
-      return { attackHistory: newHistory };
-    });
+  }
   };
   
   updateTelemetry = (intensity) => {
-    const disturbanceFactor = intensity / 100;
-    
-    this.setState({
-      realtimeTelemetry: {
-        signalStrength: Math.max(-120, -90 * (1 - disturbanceFactor)),
-        frequencyOffset: 50 * disturbanceFactor * (Math.random() > 0.5 ? 1 : -1),
-        bitErrorRate: Math.min(1, 0.01 + disturbanceFactor * 0.5),
-        commStatus: intensity > 50 ? 'jammed' : 'degraded'
-      }
-    });
+  const disturbanceFactor = intensity / 100 * (this.defenderStrategy.defenseActive ? 0.5 : 1); // 防禦啟動時降低干擾影響
 
-    setTimeout(() => {
-      if (this.state.realtimeTelemetry.commStatus !== 'normal') {
-        this.setState({
-          realtimeTelemetry: {
-            signalStrength: -90,
-            frequencyOffset: 0,
-            bitErrorRate: 0.01,
-            commStatus: 'normal'
-          }
-        });
-      }
-    }, 5000);
+  this.setState({
+    realtimeTelemetry: {
+      signalStrength: Math.max(-120, -90 * (1 - disturbanceFactor)),
+      frequencyOffset: 50 * disturbanceFactor * (Math.random() > 0.5 ? 1 : -1),
+      bitErrorRate: Math.min(1, 0.01 + disturbanceFactor * 0.5),
+      commStatus: intensity > 50 ? 'jammed' : 'degraded'
+    }
+  });
+
+  setTimeout(() => {
+    if (this.state.realtimeTelemetry.commStatus !== 'normal') {
+      this.setState({
+        realtimeTelemetry: {
+          signalStrength: -90,
+          frequencyOffset: 0,
+          bitErrorRate: 0.01,
+          commStatus: 'normal'
+        }
+      });
+    }
+  }, 5000);
   };
 
   addCelestrakSets = async () => {
@@ -791,10 +915,9 @@ class App extends Component {
   };
 
   render() {
-    const { attacker_station, defender_station, positioningMode, current_date, attackHistory, show_analysis, attack_type, frequency, bandwidth, attacker_eirp, defender_eirp, spoofing_signal_strength, dos_packet_rate, selected_range, step_size, stations, target_station } = this.state;
+    const { attacker_station, defender_station, positioningMode, current_date, attackHistory, defenseHistory, show_analysis, attack_type, frequency, bandwidth, attacker_eirp, defender_eirp, spoofing_signal_strength, dos_packet_rate, selected_range, step_size, stations, target_station, defenseStatus } = this.state;
     let jamBox;
 
-    // 計算通信狀態
     if (this.defenderRange() < 0) {
       jamBox = <h1 className="bg-secondary text-white">Satellite Out of Range</h1>;
     } else if (this.defenderPowerAtReceiver() > this.attackerPowerAtReceiver()) {
@@ -809,6 +932,7 @@ class App extends Component {
 
     return (
       <div className="container-fluid">
+      <ToastContainer position="top-right" autoClose={3000} />
         <div className="row">
           <div className="col-md-3 sidebar">
             <InfoBox 
@@ -968,9 +1092,9 @@ class App extends Component {
               </div>
               
               <div className="col-md-6">
-                <div className="DefenderSettings card mb-3">
-                  <div className="card-header h4 text-primary">Defender Settings</div>
-                  <div className="card-body">
+              <div className="DefenderSettings card mb-3">
+                <div className="card-header h4 text-primary">Defender Settings</div>
+                <div className="card-body">
                     <div className="mb-3">
                       <span className="h6">
                         <span className="h5 text-primary">Defender</span>
@@ -982,64 +1106,84 @@ class App extends Component {
                     </div>
                     
                     <div className="mb-3">
-                      <label className="form-label h6">Ground Station Coordinates</label>
-                      <div className="d-flex">
+                      <label className="form-label h6">Defense Status: {defenseStatus}</label>
+                    </div>
+                    <div className="mb-3">
+                      <label className="form-label h6">Recent Defense Actions</label>
+                      <ul>
+                        {defenseHistory.slice(-3).map(defense => (
+                          <li key={defense.id}>
+                            {new Date(defense.timestamp).toLocaleString()}: {defense.actions.join(', ')} (Against {defense.attackType})
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    
+
+                    <div className="mb-3">
+                    <label className="form-label h6">Ground Station Coordinates</label>
+                    <div className="d-flex">
                         <CoordinateInput 
-                          className="form-control CoordinateInput" 
-                          value={defender_station
+                        className="form-control CoordinateInput" 
+                        value={defender_station
                             ? `${defender_station.lat}° N ${defender_station.long}° E`
                             : '28° 34′ 24″ N 080° 39′ 03″ W'}
-                          placeholderChar={null}
-                          onChange={this.updateDefenderCoords}
+                        placeholderChar={null}
+                        onChange={this.updateDefenderCoords}
                         />
                         <Button 
-                          variant={positioningMode === 'defender' ? 'success' : 'outline-secondary'}
-                          className="ms-2"
-                          onClick={() => this.setPositioningMode('defender')}
+                        variant={positioningMode === 'defender' ? 'success' : 'outline-secondary'}
+                        className="ms-2"
+                        onClick={() => this.setPositioningMode('defender')}
                         >
-                          {positioningMode === 'defender' ? 'Click on the map to select a location...' : 'Select Map Location'}
+                        {positioningMode === 'defender' ? 'Click on the map to select a location...' : 'Select Map Location'}
                         </Button>
-                      </div>
+                    </div>
                     </div>
 
                     {positioningMode && (
-                      <div className="alert alert-info mt-3">
+                    <div className="alert alert-info mt-3">
                         Currently setting {positioningMode === 'attacker' ? 'Attacker' : 'Defender'} Location - Click on a location on Earth
                         <Button 
-                          variant="link" 
-                          className="float-end"
-                          onClick={() => this.setState({ positioningMode: null })}
+                        variant="link" 
+                        className="float-end"
+                        onClick={() => this.setState({ positioningMode: null })}
                         >
-                          Cancel
+                        Cancel
                         </Button>
-                      </div>
+                    </div>
                     )}
 
                     <div className="mb-3">
-                      <Form.Label className="h6">Defender EIRP: {defender_eirp} dBm</Form.Label>
-                      <Form.Range min="-50" max="200" defaultValue="30" onChange={this.updateDefenderEirp} />
+                    <Form.Label className="h6">Defender EIRP: {defender_eirp} dBm</Form.Label>
+                    <Form.Range min="-50" max="200" defaultValue="30" onChange={this.updateDefenderEirp} />
                     </div>
-                    
+
                     <div className="mb-3">
-                      <Form.Label className="h6">Operating Frequency: {frequency / 1e6} MHz</Form.Label>
-                      <Form.Range min="1" max="30000" step="1" value={frequency / 1e6} onChange={(e) => this.setState({ frequency: e.target.value * 1e6 })} />
+                    <Form.Label className="h6">Operating Frequency: {frequency / 1e6} MHz</Form.Label>
+                    <Form.Range min="1" max="30000" step="1" value={frequency / 1e6} onChange={(e) => this.setState({ frequency: e.target.value * 1e6 })} />
                     </div>
-                  </div>
                 </div>
-              </div>
+            </div>
+            </div>
             </div>
             
             <div className="row mt-3">
               <div className="col-md-6">
                 <SignalVisualization 
-                  frequency={frequency}
-                  bandwidth={bandwidth}
-                  disturbance={this.getAttackEffectiveness()}
+                  frequency={this.state.frequency}
+                  bandwidth={this.state.bandwidth}
+                  disturbance={this.getAttackEffectiveness().effectiveness}
+                  sinr={this.getSinrFromDbm(this.defenderPowerAtReceiver(), this.attackerPowerAtReceiver())}
+                  defenderPower={this.defenderPowerAtReceiver()}
+                  attackerPower={this.attackerPowerAtReceiver()}
+                  defenseActive={this.defenderStrategy.defenseActive}
                 />
-              </div>
-              <div className="col-md-6">
+                </div>
+                <div className="col-md-6">
                 <AttackHistory 
                   events={attackHistory}
+                  defenseHistory={defenseHistory}
                   onSelect={this.showAttackDetails}
                 />
               </div>

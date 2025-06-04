@@ -1,5 +1,9 @@
-
+/*
 * {
+  color: #f7f5f5;
+}*/
+
+body, h1, h2, h3, h4, h5, h6, p, div, span, li, ul, .card, .card-body, .table, .table td, .table th {
   color: #e0e0e0;
 }
 
@@ -7,21 +11,46 @@
 *[style*="color"] {
   color: inherit;
 }
+/* 覆蓋表格樣式 */
+.table {
+  background-color: #2d2d2d !important;
+  border: 1px solid #444 !important;
+}
 
+.table-striped > tbody > tr:nth-of-type(odd) {
+  background-color: #333 !important;
+}
+
+.table td,
+.table th {
+  background-color: transparent !important;
+  border: 1px solid #444 !important;
+  color: #e0e0e0 !important;
+}
+
+/* 確保表單控件樣式一致 */
+.form-control,
+.form-select {
+  color: #e0e0e0 !important;
+  background-color: #333;
+  border-color: #444;
+}
+
+/*
 .card-body,
 .table,
 .table td,
 .table th {
-  color: #e0e0e0;
-}
+  color: #f7f5f5;
+}*/
 
-/* Force text color for form controls if needed */
+/* Force text color for form controls if needed 
 .form-control,
 .form-select {
-  color: #e0e0e0 !important; /* !important to override bootstrap defaults */
-  background-color: #333; /* Retain dark background */
+  color: #f7f5f5 !important; 
+  background-color: #333; 
   border-color: #444;
-}
+}*/
 
 body, h1, h2, p, div, span, li, ul {
     margin: 0;
@@ -584,21 +613,29 @@ h1 {
 
 /* 攻擊歷史 */
 .attack-history {
-  max-height: 300px;
-  overflow-y: auto;
+  background-color: #2d2d2d; /* 深色背景 */
+  color: #e0e0e0 !important; /* 淺灰色文字 */
+  padding: 15px;
+  border-radius: 8px;
 }
 
+/* 確保子元素繼承文字顏色 */
+.attack-history * {
+  color: #e0e0e0 !important;
+}
+
+/* 攻擊事件列表項樣式 */
 .attack-event {
-  cursor: pointer;
-  padding: 8px;
+  background-color: #333;
+  color: #e0e0e0 !important;
+  padding: 10px;
   margin-bottom: 5px;
-  background-color: rgba(0, 40, 80, 0.5);
   border-radius: 4px;
-  transition: all 0.2s;
 }
 
+/* 滑鼠懸停效果 */
 .attack-event:hover {
-  background-color: rgba(0, 60, 120, 0.7);
+  background-color: #444;
 }
 
 .attack-event.active {
@@ -624,4 +661,8 @@ h1 {
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 0.8em;
+}
+
+.list-group-item:hover {
+  background-color: #333 !important;
 }

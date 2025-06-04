@@ -87,6 +87,39 @@ class SignalDisturbance {
 
     return canvas;
   }
+  
+  addDefenseShield(observer) {
+  if (!observer || !observer.mesh) return;
+
+  const geometry = new THREE.SphereGeometry(1.5, 32, 32);
+  const material = new THREE.MeshBasicMaterial({
+    color: 0x00FF00,
+    transparent: true,
+    opacity: 0.3,
+    wireframe: true,
+  });
+  const shield = new THREE.Mesh(geometry, material);
+  shield.position.copy(observer.mesh.position);
+  this.scene.add(shield);
+
+  // 閃爍動畫
+  let flashProgress = 0;
+  const animateShield = () => {
+    flashProgress += 0.05;
+    material.opacity = 0.3 + 0.2 * Math.sin(flashProgress * Math.PI * 2);
+
+    if (flashProgress >= 3) {
+      this.scene.remove(shield);
+      shield.geometry.dispose();
+      shield.material.dispose();
+    } else {
+      requestAnimationFrame(animateShield);
+    }
+  };
+  animateShield();
+
+  return shield;
+  }
 
   addAttackCone(source, target, power) {
     const direction = new THREE.Vector3().subVectors(
@@ -828,47 +861,73 @@ export class Engine {
     return ripple;
   };
 
-  showAttackEffect(attacker, target, intensity) {
-    this.signalDisturbance.waveMeshes.forEach(wave => {
-      this.scene.remove(wave.mesh);
-      wave.mesh.geometry.dispose();
-    });
-    this.signalDisturbance.attackCones.forEach(cone => {
-      this.scene.remove(cone.mesh);
-      cone.mesh.geometry.dispose();
-    });
+  showAttackEffect(attacker, target, intensity, result) {
+  if (!attacker || !target || !attacker.mesh || !target.mesh) return;
 
-    this.signalDisturbance.addWaveEffect(
-      attacker,
-      target,
-      this.telemetryData.frequency || 10000000,
-      intensity
-    );
+  // 創建攻擊光束（紅色激光）
+  const points = [
+    attacker.mesh.position.clone(),
+    target.mesh.position.clone(),
+  ];
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  const material = new THREE.LineBasicMaterial({
+    color: 0xFF0000,
+    linewidth: 2,
+    transparent: true,
+    opacity: 0.8,
+  });
+  const attackBeam = new THREE.Line(geometry, material);
+  this.scene.add(attackBeam);
 
-    this.updateTelemetry(intensity);
+  // 動畫效果
+  let progress = 0;
+  const animateBeam = () => {
+    progress += 0.02;
+    material.opacity = 0.8 * (1 - progress);
+
+    if (progress >= 1) {
+      this.scene.remove(attackBeam);
+      geometry.dispose();
+      material.dispose();
+
+      // 如果攻擊被阻止，顯示防禦屏障效果
+      if (result === 'Blocked') {
+        this.addDefenseShield(target);
+      }
+    } else {
+      requestAnimationFrame(animateBeam);
+    }
   };
+  animateBeam();
 
-  updateTelemetry(intensity) {
-    const disturbanceFactor = intensity / 100;
+  // 攻擊效果粒子（可選）
+  const particleGeometry = new THREE.BufferGeometry();
+  const particleCount = 50;
+  const positions = new Float32Array(particleCount * 3);
+  for (let i = 0; i < particleCount; i++) {
+    const t = i / particleCount;
+    const pos = attacker.mesh.position.clone().lerp(target.mesh.position, t);
+    positions[i * 3] = pos.x + (Math.random() - 0.5) * 0.1;
+    positions[i * 3 + 1] = pos.y + (Math.random() - 0.5) * 0.1;
+    positions[i * 3 + 2] = pos.z + (Math.random() - 0.5) * 0.1;
+  }
+  particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const particleMaterial = new THREE.PointsMaterial({
+    color: 0xFF5555,
+    size: 0.05,
+    transparent: true,
+    opacity: 0.8,
+  });
+  const particles = new THREE.Points(particleGeometry, particleMaterial);
+  this.scene.add(particles);
 
-    this.telemetryData = {
-      signalStrength: Math.max(-120, -90 * (1 - disturbanceFactor)),
-      frequencyOffset: 50 * disturbanceFactor * (Math.random() > 0.5 ? 1 : -1),
-      bitErrorRate: Math.min(1, 0.01 + disturbanceFactor * 0.5),
-      commStatus: intensity > 50 ? 'jammed' : 'degraded',
-      timestamp: new Date().toISOString()
-    };
-
-    setTimeout(() => {
-      this.telemetryData = {
-        signalStrength: -90,
-        frequencyOffset: 0,
-        bitErrorRate: 0.01,
-        commStatus: 'normal',
-        timestamp: new Date().toISOString()
-      };
-    }, 5000);
-  };
+  // 粒子消失動畫
+  setTimeout(() => {
+    this.scene.remove(particles);
+    particleGeometry.dispose();
+    particleMaterial.dispose();
+  }, 2000);
+  }
 
   showImpactEffect = (target, power) => {
     if (this.impactEffect) {
