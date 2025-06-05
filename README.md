@@ -110,10 +110,15 @@ Defense mechanisms are active for 10 seconds after an attack is launched, and th
   \]
   Where:
   - FSPL (Free Space Path Loss) is calculated as:
+    ![image](https://github.com/user-attachments/assets/d0342806-f837-4be8-9d21-b8a4396256dc)
+
     \[
     \text{FSPL (dB)} = -10 \cdot \log_{10}\left(\left(\frac{4 \pi \cdot \text{range}}{\lambda}\right)^2\right)
     \]
   - \(\lambda = \frac{c}{f}\), with \(c = 299792458 \, \text{m/s}\) (speed of light) and \(f\) being the frequency in Hz.
+    
+    ![image](https://github.com/user-attachments/assets/6620be74-9a3b-4a9a-98cd-b0b9330b7951)
+
   - Atmospheric Loss is simulated as -10 to -12 dB.
 
 ### 5. Defense Strategy
