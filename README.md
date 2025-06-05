@@ -99,6 +99,11 @@ Defense mechanisms are active for 10 seconds after an attack is launched, and th
 - **Position Updates**: Satellites' positions are updated based on the simulation's current date and time.
 
 ### 4. Attack Simulation Logic
+
+![image](https://github.com/user-attachments/assets/e36b169d-7728-4b9a-8e74-edaefba5a702)
+
++ https://www.mathworks.com/help/satcom/gs/satellite-link-budget.html
+
 - **SINR Calculation**:
   ![image](https://github.com/user-attachments/assets/4a338c66-29a6-4199-a055-8e95a69982f7)
 
