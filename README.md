@@ -1,3 +1,7 @@
+![image](https://github.com/user-attachments/assets/0297c2e8-778f-4a3f-b34f-04dfa3f8d9a3)
+
++ https://pmc.ncbi.nlm.nih.gov/articles/PMC11086249/
+
 This project is a satellite simulation platform built with React and Three.js, designed to visualize satellite orbits, simulate communication attacks, and analyze their impacts. It provides a 3D visualization of satell
 
 https://github.com/user-attachments/assets/a6cd0f83-68ae-4f71-bcd3-31e605edef3a
@@ -95,6 +99,11 @@ Defense mechanisms are active for 10 seconds after an attack is launched, and th
 - **Position Updates**: Satellites' positions are updated based on the simulation's current date and time.
 
 ### 4. Attack Simulation Logic
+
+![image](https://github.com/user-attachments/assets/e36b169d-7728-4b9a-8e74-edaefba5a702)
+
++ https://www.mathworks.com/help/satcom/gs/satellite-link-budget.html
+
 - **SINR Calculation**:
   ![image](https://github.com/user-attachments/assets/4a338c66-29a6-4199-a055-8e95a69982f7)
 
@@ -198,6 +207,7 @@ npm install dayjs\nnpm install dayjs/plugin/utc
 npm install react-toastify
 npm install three@latest
 npm install chart.js react-chartjs-2
+npm install react-markdown
 
 npm install
 npm run start
