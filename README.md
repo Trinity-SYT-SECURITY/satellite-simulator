@@ -207,6 +207,7 @@ npm install dayjs\nnpm install dayjs/plugin/utc
 npm install react-toastify
 npm install three@latest
 npm install chart.js react-chartjs-2
+npm install react-markdown
 
 npm install
 npm run start
