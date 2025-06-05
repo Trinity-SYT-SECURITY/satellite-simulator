@@ -601,15 +601,17 @@ class App extends Component {
   };
 
   attackerPowerAtReceiver = () => {
-    return this.attackerRange() > 0 
-      ? this.engine?.computePowerRx(this.state.attacker_eirp, this.attackerRange(), this.state.frequency)
-      : -200000000;
+  const range = this.attackerRange();
+  if (range <= 0) return -200000000;
+  const atmosphericLoss = -10 * (1 + Math.random() * 0.2); // 模擬大氣衰減（-10 到 -12 dB）
+  return this.engine.computePowerRx(this.state.attacker_eirp + atmosphericLoss, range, this.state.frequency);
   };
 
   defenderPowerAtReceiver = () => {
-    return this.defenderRange() > 0 
-      ? this.engine?.computePowerRx(this.state.defender_eirp, this.defenderRange(), this.state.frequency)
-      : -200000000;
+  const range = this.defenderRange();
+  if (range <= 0) return -200000000;
+  const atmosphericLoss = -10 * (1 + Math.random() * 0.2);
+  return this.engine.computePowerRx(this.state.defender_eirp + atmosphericLoss, range, this.state.frequency);
   };
 
   getStationRange = (transmitterStation, targetStation, currentTime) => {
@@ -654,17 +656,20 @@ class App extends Component {
   handleAttack = async (intensity) => {
   const { target_station, attacker_station, attack_type, frequency } = this.state;
   if (!target_station || !attacker_station) {
-    toast.error('Cannot launch attack: Target or attacker station is missing.');
+    console.warn('Cannot launch attack: Target or attacker station is missing.');
     return;
   }
 
   const range = this.getStationRange(attacker_station, target_station, this.state.current_date);
   if (range < 0) {
-    toast.error('Cannot launch attack: Target station is not visible to attacker.');
+    console.warn('Cannot launch attack: Target station is not visible to attacker.');
     return;
   }
 
-  const { effectiveness, result } = this.getAttackEffectiveness();
+  const effectiveness = this.getAttackEffectiveness(); // 獲取有效性
+  const result = effectiveness === 0 ? 'Blocked' : (effectiveness >= 80 ? 'Successful' : 'Partial'); // 簡單的結果邏輯
+  await new Promise(resolve => setTimeout(resolve, 100));
+
   this.engine.showAttackEffect(attacker_station, target_station, intensity, result);
 
   const attackEvent = {
@@ -677,31 +682,26 @@ class App extends Component {
     frequency,
     range,
     duration: 1000 * (1 + intensity / 100),
-    effectiveness,
+    effectiveness, // 明確添加 effectiveness
     result,
   };
 
-  // 即時更新攻擊紀錄並顯示通知
   this.setState(
     prev => ({
       attackHistory: [...prev.attackHistory, attackEvent],
       defenseStatus: `Defending against ${attack_type}`,
     }),
     () => {
-      toast.warn(`Attack Launched: ${attack_type} (${result})`);
+      console.log('Attack launched:', attackEvent);
     }
   );
 
-  // 觸發防禦策略
   this.defenderStrategy.activateDefense(attack_type, intensity, attackEvent.id);
 
   setTimeout(async () => {
     const analysis = await this.attackAnalyzer.analyzeAttack(attackEvent);
     this.setState(prev => ({
-      aiAnalysis: [...prev.aiAnalysis, {
-        id: attackEvent.id,
-        content: analysis
-      }],
+      aiAnalysis: [...prev.aiAnalysis, { id: attackEvent.id, content: analysis }],
       defenseStatus: 'Idle',
     }));
   }, 0);
@@ -712,29 +712,41 @@ class App extends Component {
   };
   
   updateTelemetry = (intensity) => {
-  const disturbanceFactor = intensity / 100 * (this.defenderStrategy.defenseActive ? 0.5 : 1); // 防禦啟動時降低干擾影響
+  const disturbanceFactor = intensity / 100 * (this.defenderStrategy.defenseActive ? 0.5 : 1);
+  const sinr = this.getSinrFromDbm(this.defenderPowerAtReceiver(), this.attackerPowerAtReceiver());
+  let commStatus = 'normal';
+
+  if (sinr < -10) {
+    commStatus = 'disconnected'; // SINR 低於 -10 dB 時中斷
+  } else if (intensity > 50) {
+    commStatus = 'jammed';
+  } else if (disturbanceFactor > 0.3) {
+    commStatus = 'degraded';
+  }
 
   this.setState({
     realtimeTelemetry: {
       signalStrength: Math.max(-120, -90 * (1 - disturbanceFactor)),
       frequencyOffset: 50 * disturbanceFactor * (Math.random() > 0.5 ? 1 : -1),
       bitErrorRate: Math.min(1, 0.01 + disturbanceFactor * 0.5),
-      commStatus: intensity > 50 ? 'jammed' : 'degraded'
+      commStatus,
     }
   });
 
-  setTimeout(() => {
-    if (this.state.realtimeTelemetry.commStatus !== 'normal') {
-      this.setState({
-        realtimeTelemetry: {
-          signalStrength: -90,
-          frequencyOffset: 0,
-          bitErrorRate: 0.01,
-          commStatus: 'normal'
-        }
-      });
-    }
-  }, 5000);
+  if (commStatus !== 'disconnected') {
+    setTimeout(() => {
+      if (this.state.realtimeTelemetry.commStatus !== 'normal') {
+        this.setState({
+          realtimeTelemetry: {
+            signalStrength: -90,
+            frequencyOffset: 0,
+            bitErrorRate: 0.01,
+            commStatus: 'normal'
+          }
+        });
+      }
+    }, 5000);
+  }
   };
 
   addCelestrakSets = async () => {
@@ -919,15 +931,17 @@ class App extends Component {
     let jamBox;
 
     if (this.defenderRange() < 0) {
-      jamBox = <h1 className="bg-secondary text-white">Satellite Out of Range</h1>;
+    jamBox = <h1 className="bg-secondary text-white">Satellite Out of Range</h1>;
+    } else if (this.state.realtimeTelemetry.commStatus === 'disconnected') {
+    jamBox = <h1 className="bg-dark text-white">Connection Lost!</h1>;
     } else if (this.defenderPowerAtReceiver() > this.attackerPowerAtReceiver()) {
-      if (this.dbmToWats(this.defenderPowerAtReceiver()) * 0.5 < this.dbmToWats(this.attackerPowerAtReceiver())) {
-        jamBox = <h1 className="bg-warning text-white">Signal Quality Degraded</h1>;
-      } else {
-        jamBox = <h1 className="bg-success text-white">Communications Normal!</h1>;
-      }
-    } else if (this.attackerPowerAtReceiver() > this.defenderPowerAtReceiver() && this.attackerRange() > 0) {
-      jamBox = <h1 className="bg-danger text-white">Signal Jammed!</h1>;
+    if (this.dbmToWats(this.defenderPowerAtReceiver()) * 0.5 < this.dbmToWats(this.attackerPowerAtReceiver())) {
+    jamBox = <h1 className="bg-warning text-white">Signal Quality Degraded</h1>;
+     } else {
+     jamBox = <h1 className="bg-success text-white">Communications Normal!</h1>;
+     }
+     } else if (this.attackerPowerAtReceiver() > this.defenderPowerAtReceiver() && this.attackerRange() > 0) {
+     jamBox = <h1 className="bg-danger text-white">Signal Jammed!</h1>;
     }
 
     return (

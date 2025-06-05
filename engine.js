@@ -89,36 +89,27 @@ class SignalDisturbance {
   }
   
   addDefenseShield(observer) {
-  if (!observer || !observer.mesh) return;
-
-  const geometry = new THREE.SphereGeometry(1.5, 32, 32);
-  const material = new THREE.MeshBasicMaterial({
-    color: 0x00FF00,
-    transparent: true,
-    opacity: 0.3,
-    wireframe: true,
-  });
-  const shield = new THREE.Mesh(geometry, material);
-  shield.position.copy(observer.mesh.position);
-  this.scene.add(shield);
-
-  // 閃爍動畫
-  let flashProgress = 0;
-  const animateShield = () => {
-    flashProgress += 0.05;
-    material.opacity = 0.3 + 0.2 * Math.sin(flashProgress * Math.PI * 2);
-
-    if (flashProgress >= 3) {
+    if (!observer || !observer.mesh) return;
+  
+    const geometry = new THREE.SphereGeometry(1.5, 32, 32);
+    const material = new THREE.MeshBasicMaterial({
+      color: 0x00CC00,
+      transparent: true,
+      opacity: 0.4,
+      wireframe: true,
+    });
+    const shield = new THREE.Mesh(geometry, material);
+    shield.position.copy(observer.mesh.position);
+    this.scene.add(shield);
+  
+    // 穩定顯示 10 秒後移除
+    setTimeout(() => {
       this.scene.remove(shield);
       shield.geometry.dispose();
       shield.material.dispose();
-    } else {
-      requestAnimationFrame(animateShield);
-    }
-  };
-  animateShield();
-
-  return shield;
+    }, 10000);
+  
+    return shield;
   }
 
   addAttackCone(source, target, power) {
@@ -490,9 +481,10 @@ export class Engine {
   }
 
   computePowerRx = (eirpTransmitter, rangeM, frequencyHz) => {
-    var lambda = lightSpeed / frequencyHz;
-    var fspl = -10 * Math.log10(Math.pow((4 * Math.PI * rangeM) / lambda, 2));
-    return eirpTransmitter + fspl - 30;
+    const lambda = lightSpeed / frequencyHz;
+    const fspl = -10 * Math.log10(Math.pow((4 * Math.PI * rangeM) / lambda, 2));
+    const atmosphericLoss = -10 * (1 + Math.random() * 0.2); // 模擬大氣衰減（-10 到 -12 dB）
+    return eirpTransmitter + fspl - 30 + atmosphericLoss;
   };
 
   loadLteFileStations = (url, color, stationOptions) => {
@@ -665,13 +657,16 @@ export class Engine {
   };
 
   updateSatellitePosition = (station, date) => {
-    date = date || TargetDate;
+  date = date || TargetDate;
 
-    const pos = getPositionFromTle(station, date);
-    if (!pos) return;
+  const pos = getPositionFromTle(station, date);
+  if (!pos || isNaN(pos[0].x) || isNaN(pos[0].y) || isNaN(pos[0].z)) {
+    console.warn(`Invalid position for station ${station.name} at ${date}`);
+    return;
+  }
 
-    station.mesh.position.set(pos[0].x, pos[0].y, pos[0].z);
-    station.eciPosition = pos[1];
+  station.mesh.position.set(pos[0].x, pos[0].y, pos[0].z);
+  station.eciPosition = pos[1];
   };
 
   updateAllPositions = (date) => {
@@ -687,13 +682,17 @@ export class Engine {
   };
 
   _animate = () => {
-    if (!this.renderer || !this.scene || !this.camera) return;
-    
+  if (!this.renderer || !this.scene || !this.camera) return;
+  
+  const now = performance.now();
+  if (!this.lastFrameTime || now - this.lastFrameTime >= 16) { // 約 60 FPS
     this.updateAttackLines();
     this.updateAttackEffects();
     this.signalDisturbance.updateEffects();
     this.renderer.render(this.scene, this.camera);
-    requestAnimationFrame(this._animate);
+    this.lastFrameTime = now;
+  }
+  requestAnimationFrame(this._animate);
   };
 
   addAttackLine = (fromStation, toStation) => {
@@ -756,14 +755,21 @@ export class Engine {
   updateAttackLines = () => {
     const now = Date.now();
     this.attackLines = this.attackLines.filter(item => {
-      if (now - item.createdAt > 5000) {
-        this.scene.remove(item.beam);
-        this.scene.remove(item.particles);
-        item.beam.geometry?.dispose();
-        item.particles.geometry?.dispose();
+      const duration = item.duration || 5000; // 使用攻擊線特定的 duration，預設 5000ms
+      if (now - item.createdAt > duration) {
+        if (item.beam && this.scene) {
+          this.scene.remove(item.beam);
+          item.beam.geometry?.dispose();
+          item.beam.material?.dispose();
+        }
+        if (item.particles && this.scene) {
+          this.scene.remove(item.particles);
+          item.particles.geometry?.dispose();
+          item.particles.material?.dispose();
+        }
         return false;
       }
-      
+  
       if (item.from.mesh && item.to.mesh) {
         const curve = new THREE.LineCurve3(
           item.from.mesh.position,
@@ -773,7 +779,7 @@ export class Engine {
         item.beam.geometry.dispose();
         item.beam.geometry = new THREE.BufferGeometry().setFromPoints(points);
       }
-      
+  
       return true;
     });
   };
@@ -862,71 +868,39 @@ export class Engine {
   };
 
   showAttackEffect(attacker, target, intensity, result) {
-  if (!attacker || !target || !attacker.mesh || !target.mesh) return;
-
-  // 創建攻擊光束（紅色激光）
-  const points = [
-    attacker.mesh.position.clone(),
-    target.mesh.position.clone(),
-  ];
-  const geometry = new THREE.BufferGeometry().setFromPoints(points);
-  const material = new THREE.LineBasicMaterial({
-    color: 0xFF0000,
-    linewidth: 2,
-    transparent: true,
-    opacity: 0.8,
-  });
-  const attackBeam = new THREE.Line(geometry, material);
-  this.scene.add(attackBeam);
-
-  // 動畫效果
-  let progress = 0;
-  const animateBeam = () => {
-    progress += 0.02;
-    material.opacity = 0.8 * (1 - progress);
-
-    if (progress >= 1) {
-      this.scene.remove(attackBeam);
-      geometry.dispose();
-      material.dispose();
-
-      // 如果攻擊被阻止，顯示防禦屏障效果
-      if (result === 'Blocked') {
-        this.addDefenseShield(target);
-      }
-    } else {
-      requestAnimationFrame(animateBeam);
+    if (!attacker || !target || !attacker.mesh || !target.mesh) return null;
+  
+    const points = [
+      attacker.mesh.position.clone(),
+      target.mesh.position.clone(),
+    ];
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const material = new THREE.LineBasicMaterial({
+      color: 0xFF3333,
+      linewidth: 2,
+      transparent: true,
+      opacity: 0.6,
+    });
+    const attackBeam = new THREE.Line(geometry, material);
+    this.scene.add(attackBeam);
+  
+    // 將攻擊線加入 attackLines 進行管理
+    const attackLine = {
+      beam: attackBeam,
+      particles: null, // 如果不需要粒子效果則設為 null
+      from: attacker,
+      to: target,
+      intensity,
+      createdAt: Date.now(),
+      duration: 2000 + intensity * 20, // 設置持續時間
+    };
+    this.attackLines.push(attackLine);
+  
+    if (result === 'Blocked') {
+      this.signalDisturbance.addDefenseShield(target);
     }
-  };
-  animateBeam();
-
-  // 攻擊效果粒子（可選）
-  const particleGeometry = new THREE.BufferGeometry();
-  const particleCount = 50;
-  const positions = new Float32Array(particleCount * 3);
-  for (let i = 0; i < particleCount; i++) {
-    const t = i / particleCount;
-    const pos = attacker.mesh.position.clone().lerp(target.mesh.position, t);
-    positions[i * 3] = pos.x + (Math.random() - 0.5) * 0.1;
-    positions[i * 3 + 1] = pos.y + (Math.random() - 0.5) * 0.1;
-    positions[i * 3 + 2] = pos.z + (Math.random() - 0.5) * 0.1;
-  }
-  particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  const particleMaterial = new THREE.PointsMaterial({
-    color: 0xFF5555,
-    size: 0.05,
-    transparent: true,
-    opacity: 0.8,
-  });
-  const particles = new THREE.Points(particleGeometry, particleMaterial);
-  this.scene.add(particles);
-
-  // 粒子消失動畫
-  setTimeout(() => {
-    this.scene.remove(particles);
-    particleGeometry.dispose();
-    particleMaterial.dispose();
-  }, 2000);
+  
+    return attackBeam; // 返回攻擊線以便 App.js 進一步管理
   }
 
   showImpactEffect = (target, power) => {
@@ -996,22 +970,32 @@ export class Engine {
 
   cleanupExpiredEffects = () => {
     const now = Date.now();
-
+  
     this.attackLines = this.attackLines.filter(item => {
-      if (now - item.createdAt > 5000) {
-        this.scene.remove(item.beam);
-        this.scene.remove(item.particles);
-        item.beam.geometry.dispose();
-        item.particles.geometry.dispose();
+      const duration = item.duration || 5000; // 使用攻擊線特定的 duration
+      if (now - item.createdAt > duration) {
+        if (item.beam && this.scene) {
+          this.scene.remove(item.beam);
+          item.beam.geometry?.dispose();
+          item.beam.material?.dispose();
+        }
+        if (item.particles && this.scene) {
+          this.scene.remove(item.particles);
+          item.particles.geometry?.dispose();
+          item.particles.material?.dispose();
+        }
         return false;
       }
       return true;
     });
-
+  
     this.attackEffects = this.attackEffects.filter(effect => {
       if (now - effect.createdAt > 5000) {
-        this.scene.remove(effect.mesh);
-        effect.mesh.geometry.dispose();
+        if (effect.mesh && this.scene) {
+          this.scene.remove(effect.mesh);
+          effect.mesh.geometry?.dispose();
+          effect.mesh.material?.dispose();
+        }
         return false;
       }
       return true;
@@ -1097,7 +1081,7 @@ export class Engine {
     };
 
     return effectObject;
-  }
+  };
 
   _setupCamera(width, height) {
     var NEAR = 1e-6, FAR = 1e27;
@@ -1142,8 +1126,8 @@ export class Engine {
       map: textLoader.load(earthmap, () => this.render())
     });
 
-    const earth = new THREE.Mesh(geometry, material);
-    group.add(earth);
+    this.earth = new THREE.Mesh(geometry, material);
+    group.add(this.earth);
 
     this.earth = group;
     this.scene.add(this.earth);
