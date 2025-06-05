@@ -167,29 +167,6 @@ Defense mechanisms are active for 10 seconds after an attack is launched, and th
 - **Attack History**: Lists all attack events with details and AI analysis.
 - **Defense History**: Logs all defensive actions taken in response to attacks.
 
-## Troubleshooting
-
-### 1. WebGL Context Creation Failure
-- **Symptoms**: Error message `Failed to initialize Engine: Error: Error creating WebGL context`.
-- **Solutions**:
-  - Ensure your browser supports WebGL (check `chrome://gpu` in Chrome or `about:support` in Firefox).
-  - Enable WebGL in browser settings.
-  - Update your graphics drivers.
-  - Try a different browser (e.g., latest Chrome or Firefox).
-
-### 2. Satellite Data Loading Issues
-- **Symptoms**: No satellites appear in the search bar.
-- **Solutions**:
-  - Check your internet connection (for Celestrak data fetching).
-  - Verify that `/assets/active.txt` exists as a fallback.
-  - Clear `localStorage` and reload the app to refresh cached data.
-
-### 3. Attack Effects Not Visible
-- **Symptoms**: No visual effects (e.g., beams, waves) appear during an attack.
-- **Solutions**:
-  - Ensure the attacker and target are within range and visible to each other.
-  - Check the browser console for rendering errors.
-  - Verify that `three.module.js` and related assets are loaded correctly.
 
 ---
 + https://github.com/dsuarezv/satellite-tracker/tree/master
@@ -244,4 +221,28 @@ Most of the relevant physical modeling implementation is contained in `engine.js
 + Solve data retrieval issues
 + Add AI analysis features
 
+
+## Troubleshooting
+
+### 1. WebGL Context Creation Failure
+- **Symptoms**: Error message `Failed to initialize Engine: Error: Error creating WebGL context`.
+- **Solutions**:
+  - Ensure your browser supports WebGL (check `chrome://gpu` in Chrome or `about:support` in Firefox).
+  - Enable WebGL in browser settings.
+  - Update your graphics drivers.
+  - Try a different browser (e.g., latest Chrome or Firefox).
+
+### 2. Satellite Data Loading Issues
+- **Symptoms**: No satellites appear in the search bar.
+- **Solutions**:
+  - Check your internet connection (for Celestrak data fetching).
+  - Verify that `/assets/active.txt` exists as a fallback.
+  - Clear `localStorage` and reload the app to refresh cached data.
+
+### 3. Attack Effects Not Visible
+- **Symptoms**: No visual effects (e.g., beams, waves) appear during an attack.
+- **Solutions**:
+  - Ensure the attacker and target are within range and visible to each other.
+  - Check the browser console for rendering errors.
+  - Verify that `three.module.js` and related assets are loaded correctly.
 
