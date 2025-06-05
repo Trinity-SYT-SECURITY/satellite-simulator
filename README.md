@@ -92,6 +92,8 @@ Defense mechanisms are active for 10 seconds after an attack is launched, and th
 
 ### 4. Attack Simulation Logic
 - **SINR Calculation**:
+  ![image](https://github.com/user-attachments/assets/4a338c66-29a6-4199-a055-8e95a69982f7)
+
   \[
   \text{SINR (dB)} = 10 \cdot \log_{10}\left(\frac{P_{\text{signal}}}{P_{\text{interference}} + P_{\text{noise}}}\right)
   \]
@@ -101,6 +103,8 @@ Defense mechanisms are active for 10 seconds after an attack is launched, and th
   - \(P_{\text{noise}}\) is the noise floor (default: -90 dBm).
 
 - **Power at Receiver**:
+  ![image](https://github.com/user-attachments/assets/40a9bb5a-89c9-4f97-9851-1540fd96072a)
+
   \[
   P_{\text{Rx}} = \text{EIRP} + \text{FSPL} - 30 + \text{Atmospheric Loss}
   \]
