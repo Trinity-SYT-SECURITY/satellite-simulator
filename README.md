@@ -1,4 +1,8 @@
-This project is a satellite simulation platform built with React and Three.js, designed to visualize satellite orbits, simulate communication attacks, and analyze their impacts. It provides a 3D visualization of satellites, ground stations, and attack effects, along with real-time telemetry and AI-driven attack analysis.
+This project is a satellite simulation platform built with React and Three.js, designed to visualize satellite orbits, simulate communication attacks, and analyze their impacts. It provides a 3D visualization of satell
+
+https://github.com/user-attachments/assets/a6cd0f83-68ae-4f71-bcd3-31e605edef3a
+
+ites, ground stations, and attack effects, along with real-time telemetry and AI-driven attack analysis.
 
 ## Features
 
