@@ -153,7 +153,7 @@ Defense mechanisms are active for 10 seconds after an attack is launched, and th
   ```bash
   npm run start
   ```
-- Access the app at `http://localhost:43815`.
+- Access the app at `http://localhost:1234`.
 
 ### 2. Setting Up a Simulation
 - **Select a Satellite**: Use the search bar to choose a target satellite from the available list.
